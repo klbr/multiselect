@@ -12,7 +12,7 @@ if (typeof jQuery === 'undefined') {
     throw new Error('multiselect requires jQuery');
 }
 
-;(function ($) {
+; (function ($) {
     'use strict';
 
     var version = $.fn.jquery.split(' ')[0].split('.');
@@ -22,7 +22,7 @@ if (typeof jQuery === 'undefined') {
     }
 })(jQuery);
 
-;(function (factory) {
+; (function (factory) {
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module depending on jQuery.
         define(['jquery'], factory);
@@ -33,27 +33,27 @@ if (typeof jQuery === 'undefined') {
 }(function ($) {
     'use strict';
 
-    var Multiselect = (function($) {
+    var Multiselect = (function ($) {
         /** Multiselect object constructor
          *
          *  @class Multiselect
          *  @constructor
         **/
-        function Multiselect( $select, settings ) {
+        function Multiselect($select, settings) {
             var id = $select.prop('id');
             this.$left = $select;
-            this.$right = $( settings.right ).length ? $( settings.right ) : $('#' + id + '_to');
+            this.$right = $(settings.right).length ? $(settings.right) : $('#' + id + '_to');
             this.actions = {
-                $leftAll:       $( settings.leftAll ).length ? $( settings.leftAll ) : $('#' + id + '_leftAll'),
-                $rightAll:      $( settings.rightAll ).length ? $( settings.rightAll ) : $('#' + id + '_rightAll'),
-                $leftSelected:  $( settings.leftSelected ).length ? $( settings.leftSelected ) : $('#' + id + '_leftSelected'),
-                $rightSelected: $( settings.rightSelected ).length ? $( settings.rightSelected ) : $('#' + id + '_rightSelected'),
+                $leftAll: $(settings.leftAll).length ? $(settings.leftAll) : $('#' + id + '_leftAll'),
+                $rightAll: $(settings.rightAll).length ? $(settings.rightAll) : $('#' + id + '_rightAll'),
+                $leftSelected: $(settings.leftSelected).length ? $(settings.leftSelected) : $('#' + id + '_leftSelected'),
+                $rightSelected: $(settings.rightSelected).length ? $(settings.rightSelected) : $('#' + id + '_rightSelected'),
 
-                $undo:          $( settings.undo ).length ? $( settings.undo ) : $('#' + id + '_undo'),
-                $redo:          $( settings.redo ).length ? $( settings.redo ) : $('#' + id + '_redo'),
+                $undo: $(settings.undo).length ? $(settings.undo) : $('#' + id + '_undo'),
+                $redo: $(settings.redo).length ? $(settings.redo) : $('#' + id + '_redo'),
 
-                $moveUp:        $( settings.moveUp ).length ? $( settings.moveUp ) : $('#' + id + '_move_up'),
-                $moveDown:      $( settings.moveDown ).length ? $( settings.moveDown ) : $('#' + id + '_move_down')
+                $moveUp: $(settings.moveUp).length ? $(settings.moveUp) : $('#' + id + '_move_up'),
+                $moveDown: $(settings.moveDown).length ? $(settings.moveDown) : $('#' + id + '_move_down')
             };
 
             delete settings.leftAll;
@@ -67,11 +67,11 @@ if (typeof jQuery === 'undefined') {
             delete settings.moveDown;
 
             this.options = {
-                keepRenderingSort:  settings.keepRenderingSort,
-                submitAllLeft:      settings.submitAllLeft !== undefined ? settings.submitAllLeft : true,
-                submitAllRight:     settings.submitAllRight !== undefined ? settings.submitAllRight : true,
-                search:             settings.search,
-                ignoreDisabled:     settings.ignoreDisabled !== undefined ? settings.ignoreDisabled : false
+                keepRenderingSort: settings.keepRenderingSort,
+                submitAllLeft: settings.submitAllLeft !== undefined ? settings.submitAllLeft : true,
+                submitAllRight: settings.submitAllRight !== undefined ? settings.submitAllRight : true,
+                search: settings.search,
+                ignoreDisabled: settings.ignoreDisabled !== undefined ? settings.ignoreDisabled : false
             };
 
             delete settings.keepRenderingSort, settings.submitAllLeft, settings.submitAllRight, settings.search, settings.ignoreDisabled;
@@ -82,42 +82,81 @@ if (typeof jQuery === 'undefined') {
         }
 
         Multiselect.prototype = {
-            init: function() {
+            basicOptgroupSortEnabled: false,
+
+            basicOptgroupSort: function (side) {
+                var self = this;
+
+                if (!self.basicOptgroupSortEnabled) {
+                    return;
+                }
+
+                if (side == "left") {
+                    self.$left.find('optgroup').each(function () {
+                        var optgroup = $(this);
+                        var options = optgroup.children().toArray().sort(function (a, b) {
+                            return $(a).text() < $(b).text() ? 1 : -1
+                        });
+                        $.each(options, function (i, v) {
+                            optgroup.prepend(v)
+                        })
+                    });
+                }
+                
+                if (side == "right") {
+                    self.$right.find('optgroup').each(function () {
+                        var optgroup = $(this);
+                        var options = optgroup.children().toArray().sort(function (a, b) {
+                            return $(a).text() < $(b).text() ? 1: -1
+                            });
+                        $.each(options, function(i, v) {
+                            optgroup.prepend(v)
+                        })
+                    });
+                }
+            },
+
+            init: function () {
                 var self = this;
                 self.undoStack = [];
                 self.redoStack = [];
-
+                var hasOptgroup = false;
                 // For the moment disable sort if there is a optgroup element
                 if (self.$left.find('optgroup').length || self.$right.find('optgroup').length) {
                     self.callbacks.sort = false;
+                    hasOptgroup = true;
                 }
 
                 if (self.options.keepRenderingSort) {
                     self.skipInitSort = true;
 
                     if (self.callbacks.sort !== false) {
-                        self.callbacks.sort = function(a, b) {
+                        self.callbacks.sort = function (a, b) {
                             return $(a).data('position') > $(b).data('position') ? 1 : -1;
                         };
                     }
 
-                    self.$left.find('option').each(function(index, option) {
-                        $(option).data('position', index);
-                    });
+                    if (hasOptgroup) {
+                        self.basicOptgroupSortEnabled = true;
+                    } else {
+                        self.$left.find('option').each(function (index, option) {
+                            $(option).data('position', index);
+                        });
 
-                    self.$right.find('option').each(function(index, option) {
-                        $(option).data('position', index);
-                    });
+                        self.$right.find('option').each(function (index, option) {
+                            $(option).data('position', index);
+                        });
+                    }
                 }
 
-                if ( typeof self.callbacks.startUp == 'function' ) {
-                    self.callbacks.startUp( self.$left, self.$right );
+                if (typeof self.callbacks.startUp == 'function') {
+                    self.callbacks.startUp(self.$left, self.$right);
                 }
 
-                if ( !self.skipInitSort && typeof self.callbacks.sort == 'function' ) {
+                if (!self.skipInitSort && typeof self.callbacks.sort == 'function') {
                     self.$left.mSort(self.callbacks.sort);
 
-                    self.$right.each(function(i, select) {
+                    self.$right.each(function (i, select) {
                         $(select).mSort(self.callbacks.sort);
                     });
                 }
@@ -138,17 +177,17 @@ if (typeof jQuery === 'undefined') {
                 self.events();
             },
 
-            events: function() {
+            events: function () {
                 var self = this;
 
                 // Attach event to left filter
                 if (self.options.search && self.options.search.$left) {
-                    self.options.search.$left.on('keyup', function(e) {
+                    self.options.search.$left.on('keyup', function (e) {
                         if (this.value) {
                             var $toShow = self.$left.find('option:search("' + this.value + '")').mShow();
                             var $toHide = self.$left.find('option:not(:search("' + this.value + '"))').mHide();
-                            var $grpHide= self.$left.find('option.hidden').parent('optgroup').not($(":visible").parent()).mHide();
-                            var $grpShow= self.$left.find('option:not(.hidden)').parent('optgroup').mShow();
+                            var $grpHide = self.$left.find('option.hidden').parent('optgroup').not($(":visible").parent()).mHide();
+                            var $grpShow = self.$left.find('option:not(.hidden)').parent('optgroup').mShow();
                         } else {
                             self.$left.find('option, optgroup').mShow();
                         }
@@ -157,12 +196,12 @@ if (typeof jQuery === 'undefined') {
 
                 // Attach event to right filter
                 if (self.options.search && self.options.search.$right) {
-                    self.options.search.$right.on('keyup', function(e) {
+                    self.options.search.$right.on('keyup', function (e) {
                         if (this.value) {
                             var $toShow = self.$right.find('option:search("' + this.value + '")').mShow();
                             var $toHide = self.$right.find('option:not(:search("' + this.value + '"))').mHide();
-                            var $grpHide= self.$right.find('option.hidden').parent('optgroup').not($(":visible").parent()).mHide();
-                            var $grpShow= self.$right.find('option:not(.hidden)').parent('optgroup').mShow();
+                            var $grpHide = self.$right.find('option.hidden').parent('optgroup').not($(":visible").parent()).mHide();
+                            var $grpShow = self.$right.find('option:not(.hidden)').parent('optgroup').mShow();
                         } else {
                             self.$right.find('option, optgroup').mShow();
                         }
@@ -170,135 +209,135 @@ if (typeof jQuery === 'undefined') {
                 }
 
                 // Select all the options from left and right side when submiting the parent form
-                self.$right.closest('form').on('submit', function(e) {
+                self.$right.closest('form').on('submit', function (e) {
                     self.$left.find('option').prop('selected', self.options.submitAllLeft);
                     self.$right.find('option').prop('selected', self.options.submitAllRight);
                 });
 
                 // Attach event for double clicking on options from left side
-                self.$left.on('dblclick', 'option', function(e) {
+                self.$left.on('dblclick', 'option', function (e) {
                     e.preventDefault();
 
                     var $options = self.$left.find('option:selected');
 
-                    if ( $options.length ) {
+                    if ($options.length) {
                         self.moveToRight($options, e);
                     }
                 });
-                
+
                 // Attach event for pushing ENTER on options from left side
-                self.$left.on('keypress', function(e) {
+                self.$left.on('keypress', function (e) {
                     if (e.keyCode === 13) {
                         e.preventDefault();
-                        
+
                         var $options = self.$left.find('option:selected');
 
-                        if ( $options.length ) {
+                        if ($options.length) {
                             self.moveToRight($options, e);
                         }
                     }
                 });
 
                 // Attach event for double clicking on options from right side
-                self.$right.on('dblclick', 'option', function(e) {
+                self.$right.on('dblclick', 'option', function (e) {
                     e.preventDefault();
 
                     var $options = self.$right.find('option:selected');
 
-                    if ( $options.length ) {
+                    if ($options.length) {
                         self.moveToLeft($options, e);
                     }
                 });
 
                 // Attach event for pushing BACKSPACE or DEL on options from right side
-                self.$right.on('keydown', function(e) {
+                self.$right.on('keydown', function (e) {
                     if (e.keyCode === 8 || e.keyCode === 46) {
                         e.preventDefault();
 
                         var $options = self.$right.find('option:selected');
 
-                        if ( $options.length ) {
+                        if ($options.length) {
                             self.moveToLeft($options, e);
                         }
                     }
                 });
 
                 // dblclick support for IE
-                if ( navigator.userAgent.match(/MSIE/i)  || navigator.userAgent.indexOf('Trident/') > 0 || navigator.userAgent.indexOf('Edge/') > 0) {
-                    self.$left.dblclick(function(e) {
+                if (navigator.userAgent.match(/MSIE/i) || navigator.userAgent.indexOf('Trident/') > 0 || navigator.userAgent.indexOf('Edge/') > 0) {
+                    self.$left.dblclick(function (e) {
                         self.actions.$rightSelected.trigger('click');
                     });
 
-                    self.$right.dblclick(function(e) {
+                    self.$right.dblclick(function (e) {
                         self.actions.$leftSelected.trigger('click');
                     });
                 }
 
-                self.actions.$rightSelected.on('click', function(e) {
+                self.actions.$rightSelected.on('click', function (e) {
                     e.preventDefault();
 
                     var $options = self.$left.find('option:selected');
 
-                    if ( $options.length ) {
+                    if ($options.length) {
                         self.moveToRight($options, e);
                     }
 
                     $(this).blur();
                 });
 
-                self.actions.$leftSelected.on('click', function(e) {
+                self.actions.$leftSelected.on('click', function (e) {
                     e.preventDefault();
 
                     var $options = self.$right.find('option:selected');
 
-                    if ( $options.length ) {
+                    if ($options.length) {
                         self.moveToLeft($options, e);
                     }
 
                     $(this).blur();
                 });
 
-                self.actions.$rightAll.on('click', function(e) {
+                self.actions.$rightAll.on('click', function (e) {
                     e.preventDefault();
 
                     var $options = self.$left.children(':not(span):not(.hidden)');
 
-                    if ( $options.length ) {
+                    if ($options.length) {
                         self.moveToRight($options, e);
                     }
 
                     $(this).blur();
                 });
 
-                self.actions.$leftAll.on('click', function(e) {
+                self.actions.$leftAll.on('click', function (e) {
                     e.preventDefault();
 
                     var $options = self.$right.children(':not(span):not(.hidden)');
 
-                    if ( $options.length ) {
+                    if ($options.length) {
                         self.moveToLeft($options, e);
                     }
 
                     $(this).blur();
                 });
 
-                self.actions.$undo.on('click', function(e) {
+                self.actions.$undo.on('click', function (e) {
                     e.preventDefault();
 
                     self.undo(e);
                 });
 
-                self.actions.$redo.on('click', function(e) {
+                self.actions.$redo.on('click', function (e) {
                     e.preventDefault();
 
                     self.redo(e);
                 });
 
-                self.actions.$moveUp.on('click', function(e) {
+                self.actions.$moveUp.on('click', function (e) {
                     e.preventDefault();
 
                     self.doNotSortRight = true;
-                    
+
                     var $options = self.$right.find(':selected:not(span):not(.hidden)');
 
                     $options.first().prev().before($options);
@@ -306,32 +345,32 @@ if (typeof jQuery === 'undefined') {
                     $(this).blur();
                 });
 
-                self.actions.$moveDown.on('click', function(e) {                    
+                self.actions.$moveDown.on('click', function (e) {
                     e.preventDefault();
 
                     self.doNotSortRight = true;
 
                     var $options = self.$right.find(':selected:not(span):not(.hidden)');
-                    
+
                     $options.last().next().after($options);
 
                     $(this).blur();
                 });
             },
 
-            moveToRight: function( $options, event, silent, skipStack ) {
+            moveToRight: function ($options, event, silent, skipStack) {
                 var self = this;
 
-                if ( typeof self.callbacks.moveToRight == 'function' ) {
-                    return self.callbacks.moveToRight( self, $options, event, silent, skipStack );
+                if (typeof self.callbacks.moveToRight == 'function') {
+                    return self.callbacks.moveToRight(self, $options, event, silent, skipStack);
                 } else {
-                    if ( typeof self.callbacks.beforeMoveToRight == 'function' && !silent ) {
-                        if ( !self.callbacks.beforeMoveToRight( self.$left, self.$right, $options ) ) {
+                    if (typeof self.callbacks.beforeMoveToRight == 'function' && !silent) {
+                        if (!self.callbacks.beforeMoveToRight(self.$left, self.$right, $options)) {
                             return false;
                         }
                     }
 
-                    $options.each(function(index, option) {
+                    $options.each(function (index, option) {
                         var $option = $(option);
 
                         if (self.options.ignoreDisabled && $option.is(':disabled')) {
@@ -351,40 +390,40 @@ if (typeof jQuery === 'undefined') {
 
                             $leftGroup.removeIfEmpty();
                         }
-
                         self.$right.move($option);
+                        self.basicOptgroupSort("right");
                     });
 
-                    if ( !skipStack ) {
-                        self.undoStack.push(['right', $options ]);
+                    if (!skipStack) {
+                        self.undoStack.push(['right', $options]);
                         self.redoStack = [];
                     }
 
-                    if ( typeof self.callbacks.sort == 'function' && !silent && !self.doNotSortRight ) {
+                    if (typeof self.callbacks.sort == 'function' && !silent && !self.doNotSortRight) {
                         self.$right.mSort(self.callbacks.sort);
                     }
 
-                    if ( typeof self.callbacks.afterMoveToRight == 'function' && !silent ) {
-                        self.callbacks.afterMoveToRight( self.$left, self.$right, $options );
+                    if (typeof self.callbacks.afterMoveToRight == 'function' && !silent) {
+                        self.callbacks.afterMoveToRight(self.$left, self.$right, $options);
                     }
 
                     return self;
                 }
             },
 
-            moveToLeft: function( $options, event, silent, skipStack ) {
+            moveToLeft: function ($options, event, silent, skipStack) {
                 var self = this;
 
-                if ( typeof self.callbacks.moveToLeft == 'function' ) {
-                    return self.callbacks.moveToLeft( self, $options, event, silent, skipStack );
+                if (typeof self.callbacks.moveToLeft == 'function') {
+                    return self.callbacks.moveToLeft(self, $options, event, silent, skipStack);
                 } else {
-                    if ( typeof self.callbacks.beforeMoveToLeft == 'function' && !silent ) {
-                        if ( !self.callbacks.beforeMoveToLeft( self.$left, self.$right, $options ) ) {
+                    if (typeof self.callbacks.beforeMoveToLeft == 'function' && !silent) {
+                        if (!self.callbacks.beforeMoveToLeft(self.$left, self.$right, $options)) {
                             return false;
                         }
                     }
 
-                    $options.each(function(index, option) {
+                    $options.each(function (index, option) {
                         var $option = $(option);
 
                         if ($option.is('optgroup') || $option.parent().is('optgroup')) {
@@ -396,39 +435,39 @@ if (typeof jQuery === 'undefined') {
                                 $leftGroup.children().remove();
                             }
 
-                            $option = $leftGroup.append($option.is('optgroup') ? $option.children() : $option );
+                            $option = $leftGroup.append($option.is('optgroup') ? $option.children() : $option);
 
                             $rightGroup.removeIfEmpty();
                         }
-
                         self.$left.move($option);
+                        self.basicOptgroupSort("left");
                     });
 
-                    if ( !skipStack ) {
-                        self.undoStack.push(['left', $options ]);
+                    if (!skipStack) {
+                        self.undoStack.push(['left', $options]);
                         self.redoStack = [];
                     }
 
-                    if ( typeof self.callbacks.sort == 'function' && !silent ) {
+                    if (typeof self.callbacks.sort == 'function' && !silent) {
                         self.$left.mSort(self.callbacks.sort);
                     }
 
-                    if ( typeof self.callbacks.afterMoveToLeft == 'function' && !silent ) {
-                        self.callbacks.afterMoveToLeft( self.$left, self.$right, $options );
+                    if (typeof self.callbacks.afterMoveToLeft == 'function' && !silent) {
+                        self.callbacks.afterMoveToLeft(self.$left, self.$right, $options);
                     }
 
                     return self;
                 }
             },
 
-            undo: function(event) {
+            undo: function (event) {
                 var self = this;
                 var last = self.undoStack.pop();
 
-                if ( last ) {
+                if (last) {
                     self.redoStack.push(last);
 
-                    switch(last[0]) {
+                    switch (last[0]) {
                         case 'left':
                             self.moveToRight(last[1], event, false, true);
                             break;
@@ -439,14 +478,14 @@ if (typeof jQuery === 'undefined') {
                 }
             },
 
-            redo: function(event) {
+            redo: function (event) {
                 var self = this;
                 var last = self.redoStack.pop();
 
-                if ( last ) {
+                if (last) {
                     self.undoStack.push(last);
 
-                    switch(last[0]) {
+                    switch (last[0]) {
                         case 'left':
                             self.moveToLeft(last[1], event, false, true);
                             break;
@@ -469,8 +508,8 @@ if (typeof jQuery === 'undefined') {
              *  @attribute $left jQuery object
              *  @attribute $right jQuery object
             **/
-            startUp: function( $left, $right ) {
-                $right.find('option').each(function(index, option) {
+            startUp: function ($left, $right) {
+                $right.find('option').each(function (index, option) {
                     var $option = $left.find('option[value="' + option.value + '"]');
                     var $parent = $option.parent();
 
@@ -496,7 +535,7 @@ if (typeof jQuery === 'undefined') {
              *  @default true
              *  @return {boolean}
             **/
-            beforeMoveToRight: function($left, $right, $options) { return true; },
+            beforeMoveToRight: function ($left, $right, $options) { return true; },
 
             /*  will be executed each time after moving option[s] to right
              *
@@ -505,7 +544,7 @@ if (typeof jQuery === 'undefined') {
              *  @attribute $right jQuery object
              *  @attribute $options HTML object (the option[s] which was selected to be moved)
             **/
-            afterMoveToRight: function($left, $right, $options) {},
+            afterMoveToRight: function ($left, $right, $options) { },
 
             /** will be executed each time before moving option[s] to left
              *
@@ -521,7 +560,7 @@ if (typeof jQuery === 'undefined') {
              *  @default true
              *  @return {boolean}
             **/
-            beforeMoveToLeft: function($left, $right, $options) { return true; },
+            beforeMoveToLeft: function ($left, $right, $options) { return true; },
 
             /*  will be executed each time after moving option[s] to left
              *
@@ -530,7 +569,7 @@ if (typeof jQuery === 'undefined') {
              *  @attribute $right jQuery object
              *  @attribute $options HTML object (the option[s] which was selected to be moved)
             **/
-            afterMoveToLeft: function($left, $right, $options) {},
+            afterMoveToLeft: function ($left, $right, $options) { },
 
             /** sort options by option text
              *
@@ -540,7 +579,7 @@ if (typeof jQuery === 'undefined') {
              *
              *  @return 1/-1
             **/
-            sort: function(a, b) {
+            sort: function (a, b) {
                 if (a.innerHTML == 'NA') {
                     return 1;
                 } else if (b.innerHTML == 'NA') {
@@ -555,10 +594,10 @@ if (typeof jQuery === 'undefined') {
     var ua = window.navigator.userAgent;
     var isIE = (ua.indexOf("MSIE ") + ua.indexOf("Trident/") + ua.indexOf("Edge/")) > -3;
 
-    $.fn.multiselect = function( options ) {
-        return this.each(function() {
-            var $this    = $(this),
-                data     = $this.data('crlcu.multiselect'),
+    $.fn.multiselect = function (options) {
+        return this.each(function () {
+            var $this = $(this),
+                data = $this.data('crlcu.multiselect'),
                 settings = $.extend({}, $.multiselect.defaults, $this.data(), (typeof options === 'object' && options));
 
             if (!data) {
@@ -569,16 +608,15 @@ if (typeof jQuery === 'undefined') {
 
     // append options
     // then set the selected attribute to false
-    $.fn.move = function( $options ) {
-        this
-            .append($options)
-            .find('option')
-            .prop('selected', false);
-
+    $.fn.move = function ($options) {
+        if (this.find($options.selector).length == 0) {
+            this.append($options);
+        }
+        this.find('option').prop('selected', false);
         return this;
     };
 
-    $.fn.removeIfEmpty = function() {
+    $.fn.removeIfEmpty = function () {
         if (!this.children().length) {
             this.remove();
         }
@@ -586,13 +624,13 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    $.fn.mShow = function() {
+    $.fn.mShow = function () {
         this.removeClass('hidden').show();
 
-        if ( isIE ) {
-            this.each(function(index, option) {
+        if (isIE) {
+            this.each(function (index, option) {
                 // Remove <span> to make it compatible with IE
-                if($(option).parent().is('span')) {
+                if ($(option).parent().is('span')) {
                     $(option).parent().replaceWith(option);
                 }
 
@@ -603,13 +641,13 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    $.fn.mHide = function() {
+    $.fn.mHide = function () {
         this.addClass('hidden').hide();
 
-        if ( isIE ) {
-            this.each(function(index, option) {
+        if (isIE) {
+            this.each(function (index, option) {
                 // Wrap with <span> to make it compatible with IE
-                if(!$(option).parent().is('span')) {
+                if (!$(option).parent().is('span')) {
                     $(option).wrap('<span>').hide();
                 }
             });
@@ -619,7 +657,7 @@ if (typeof jQuery === 'undefined') {
     };
 
     // sort options then reappend them to the select
-    $.fn.mSort = function(callback) {
+    $.fn.mSort = function (callback) {
         this
             .find('option')
             .sort(callback)
@@ -628,7 +666,7 @@ if (typeof jQuery === 'undefined') {
         return this;
     };
 
-    $.expr[":"].search = function(elem, index, meta) {
+    $.expr[":"].search = function (elem, index, meta) {
         return $(elem).text().toUpperCase().indexOf(meta[3].toUpperCase()) >= 0;
     }
 }));
